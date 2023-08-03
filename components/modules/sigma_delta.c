@@ -18,6 +18,22 @@ static int sigma_delta_setup( lua_State *L )
 
   return 0;
 }
+// Lua: setup( channel, pin, prescale,duty )
+static int sigma_delta_config( lua_State *L )
+{
+  int channel = luaL_checkinteger( L, 1 );
+  int pin = luaL_checkinteger( L, 2 );
+  int prescale = luaL_checkinteger( L, 3 );
+  int duty = luaL_checkinteger( L, 4 );
+
+  MOD_CHECK_ID(sigma_delta, channel);
+
+  if (!platform_sigma_delta_config( channel, pin,prescale, duty ))
+    luaL_error( L, "command failed" );
+
+  return 0;
+}
+
 
 // Lua: close( channel )
 static int sigma_delta_close( lua_State *L )
@@ -81,6 +97,7 @@ LROT_BEGIN(sigma_delta, NULL, 0)
   LROT_FUNCENTRY( setup,       sigma_delta_setup )
   LROT_FUNCENTRY( close,       sigma_delta_close )
   //LROT_FUNCENTRY( setpwmduty,  sigma_delta_setpwmduty )
+  LROT_FUNCENTRY(config,       sigma_delta_config)
   LROT_FUNCENTRY( setprescale, sigma_delta_setprescale )
   LROT_FUNCENTRY( setduty,     sigma_delta_setduty )
 LROT_END(sigma_delta, NULL, 0)

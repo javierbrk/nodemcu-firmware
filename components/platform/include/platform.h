@@ -129,6 +129,8 @@ uint8_t platform_sigma_delta_close( uint8_t channel );
 //uint8_t platform_sigma_delta_set_pwmduty( uint8_t channel, uint8_t duty );
 uint8_t platform_sigma_delta_set_prescale( uint8_t channel, uint8_t prescale );
 uint8_t platform_sigma_delta_set_duty( uint8_t channel, int8_t duty );
+uint8_t platform_sigma_delta_config( uint8_t channel, uint8_t gpio_num ,uint8_t prescale,uint8_t  duty);
+
 
 // *****************************************************************************
 // ADC

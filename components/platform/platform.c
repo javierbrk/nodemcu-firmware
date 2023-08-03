@@ -438,6 +438,19 @@ uint8_t platform_sigma_delta_setup( uint8_t channel, uint8_t gpio_num )
   return ESP_OK == sigmadelta_set_pin( channel, gpio_num ) ? 1 : 0;
 }
 
+uint8_t platform_sigma_delta_config( uint8_t channel, uint8_t gpio_num ,uint8_t prescale,uint8_t  duty)
+{
+
+  sigmadelta_config_t sigmadelta_cfg = {
+        .channel = channel,
+        .sigmadelta_prescale = prescale,
+        .sigmadelta_duty = duty,
+        .sigmadelta_gpio = gpio_num,
+    };
+    
+return ESP_OK == sigmadelta_config(&sigmadelta_cfg) ? 1 : 0;
+}
+    
 uint8_t platform_sigma_delta_close( uint8_t channel )
 {
 #if 0
@@ -457,7 +470,6 @@ uint8_t platform_sigma_delta_close( uint8_t channel )
   cfg.pin_bit_mask = 1 << platform_sigma_delta_channel2gpio[channel];
   if (ESP_OK != gpio_config( &cfg ))
     return 0;
-
   // and set it finally to input with pull-up enabled
   cfg.mode = GPIO_MODE_INPUT;
 
