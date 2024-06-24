@@ -36,6 +36,9 @@
 
 #include "driver/gpio.h"
 #include "task/task.h"
+#include "esp_timer.h"
+#include <esp_types.h>
+
 
 #include <assert.h>
 
@@ -65,6 +68,41 @@ static void single_pin_isr (void *p)
   task_post_isr_low (cb_task, (gpio_num) | (gpio_get_level (gpio_num) << 8));
 }
 
+unsigned long IRAM_ATTR micros()
+{
+    return (unsigned long) (esp_timer_get_time());
+}
+void IRAM_ATTR delayMicroseconds(uint32_t us)
+{
+    int i =0;
+    uint32_t m = micros();
+    if(us){
+        uint32_t e = (m + us);
+        if(m > e){ //overflow
+            while(micros() > e){
+                i++;;
+            }
+        }
+        while(micros() < e){
+            i++;;
+        }
+    }
+}
+
+static int zc_counter=0;
+static void single_triac_isr (void *p)
+{
+  gpio_num_t gpio_num = (gpio_num_t)p;
+  gpio_intr_disable (gpio_num);
+  zc_counter =(zc_counter + 1) % 3;
+        if (zc_counter == 0) 
+        {
+             gpio_set_level(2,1);
+             delayMicroseconds(30);
+             gpio_set_level(2,0);
+        }
+  gpio_intr_enable (gpio_num);
+}
 
 /* Lua: gpio.config({
  *   gpio= x || { x, y ... }
@@ -145,6 +183,10 @@ static int lgpio_trig (lua_State *L)
 
   lua_settop (L, 3);
 
+  int is_triact = 0;
+  if (!lua_isnoneornil (L, 4))
+    is_triact = luaL_optint (L, 4,GPIO_INTR_DISABLE);
+
   if (gpio < 0 || gpio >= GPIO_PIN_COUNT)
     return luaL_error (L, "invalid gpio");
 
@@ -181,7 +223,10 @@ static int lgpio_trig (lua_State *L)
   else
   {
     check_err (L, gpio_set_intr_type (gpio, intr_type));
-    check_err (L, gpio_isr_handler_add (gpio, single_pin_isr, (void *)gpio));
+    if (is_triact == 0)
+      check_err (L, gpio_isr_handler_add (gpio, single_pin_isr, (void *)gpio));
+    else
+      check_err (L, gpio_isr_handler_add (gpio, single_triac_isr, (void *)gpio));
     check_err (L, gpio_intr_enable (gpio));
   }
   return 0;
