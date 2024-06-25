@@ -38,7 +38,8 @@
 #include "task/task.h"
 #include "esp_timer.h"
 #include <esp_types.h>
-
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #include <assert.h>
 
@@ -47,6 +48,7 @@
 
 static int *gpio_cb_refs = NULL; // Lazy init
 static task_handle_t cb_task;
+static esp_timer_handle_t oneshot_timer;
 
 static int check_err (lua_State *L, esp_err_t err)
 {
@@ -89,19 +91,44 @@ void IRAM_ATTR delayMicroseconds(uint32_t us)
     }
 }
 
-static int zc_counter=0;
+
+static void oneshot_timer_callback(void* arg)
+{
+  gpio_set_level(2,1);
+  delayMicroseconds(30);// time required to turn triac on
+  gpio_set_level(2,0);
+}
+
+volatile uint64_t triac_start_delay = 5000;
+
 static void single_triac_isr (void *p)
 {
   gpio_num_t gpio_num = (gpio_num_t)p;
+  const esp_timer_create_args_t oneshot_timer_args = {
+      .callback = &oneshot_timer_callback,
+      /* argument specified here will be passed to timer callback function */
+      //.arg = (void*) periodic_timer,
+      .name = "one-shot"
+};
   gpio_intr_disable (gpio_num);
-  zc_counter =(zc_counter + 1) % 3;
-        if (zc_counter == 0) 
-        {
-             gpio_set_level(2,1);
-             delayMicroseconds(30);
-             gpio_set_level(2,0);
-        }
+  esp_timer_create(&oneshot_timer_args, &oneshot_timer);
+  esp_timer_start_once(oneshot_timer, triac_start_delay);
+  delayMicroseconds(30);
   gpio_intr_enable (gpio_num);
+}
+
+// Lua: gpio.triac_delay(delay_usecs=2000)
+static int lgpio_triac_delay (lua_State *L)
+{
+  int io_rate_local = luaL_checkint (L, 1);
+  if(io_rate_local<2000 || io_rate_local > 9000)
+  {
+    io_rate_local = 2000;
+  }
+  //taskENTER_CRITICAL();
+  triac_start_delay = io_rate_local;
+  //taskEXIT_CRITICAL();
+  return 0;
 }
 
 /* Lua: gpio.config({
@@ -183,10 +210,6 @@ static int lgpio_trig (lua_State *L)
 
   lua_settop (L, 3);
 
-  int is_triact = 0;
-  if (!lua_isnoneornil (L, 4))
-    is_triact = luaL_optint (L, 4,GPIO_INTR_DISABLE);
-
   if (gpio < 0 || gpio >= GPIO_PIN_COUNT)
     return luaL_error (L, "invalid gpio");
 
@@ -223,10 +246,14 @@ static int lgpio_trig (lua_State *L)
   else
   {
     check_err (L, gpio_set_intr_type (gpio, intr_type));
-    if (is_triact == 0)
+    if (gpio != 15)
+    {
       check_err (L, gpio_isr_handler_add (gpio, single_pin_isr, (void *)gpio));
+    }
     else
+    {
       check_err (L, gpio_isr_handler_add (gpio, single_triac_isr, (void *)gpio));
+    }
     check_err (L, gpio_intr_enable (gpio));
   }
   return 0;
@@ -302,6 +329,7 @@ LROT_BEGIN(lgpio, NULL, 0)
   LROT_FUNCENTRY( wakeup,       lgpio_wakeup )
   LROT_FUNCENTRY( write,        lgpio_write )
   LROT_FUNCENTRY( set_drive,    lgpio_set_drive )
+  LROT_FUNCENTRY( triac_delay,  lgpio_triac_delay)
 
 
   LROT_NUMENTRY ( OUT,          GPIO_MODE_OUTPUT )
