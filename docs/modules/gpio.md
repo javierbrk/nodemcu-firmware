@@ -102,13 +102,22 @@ Establish or clear a callback function to run on interrupt for a GPIO.
     - `gpio.INTR_UP_DOWN` for trigger on both edges
     - `gpio.INTR_LOW` for trigger on low level
     - `gpio.INTR_HIGH` for trigger on high level
+    - `gpio.INTR_TRIAC` for triac mode (uses intr up as internal mode). 
 - `callback` optional function to be called when trigger fires. If `nil` or omitted (and `type` is not `gpio.INTR_DISABLE`) then any previously-set callback will continue to be used. Parameters are:
     - `pin`
     - `level`
 
 #### Returns
 `nil`
+#### Example
+```lua
 
+GPIOZC = 15
+gpio.trig(GPIOZC, gpio.INTR_TRIAC)
+gpio.triac_delay(8500)
+gpio.triac_delay(9000)
+
+```
 
 ## gpio.wakeup()
 Configure whether the given pin should trigger wake up from light sleep initiated by [`node.sleep()`](node.md#nodesleep).
@@ -143,6 +152,18 @@ Set digital GPIO pin value.
 #### Parameters
 - `pin` pin to write, see [GPIO Overview](#gpio-overview)
 - `level` 1 or 0
+
+#### Returns
+`nil`
+
+## triac_delay( delay )
+Set digital GPIO pin value.
+
+#### Syntax
+`gpio.write(delay)`
+
+#### Parameters
+- `delay` delay in micro seconds from zc to turn on the triac, must be betwen 2000 and 9000. 
 
 #### Returns
 `nil`
