@@ -45,6 +45,7 @@
 
 #define PULL_UP 1
 #define PULL_DOWN 2
+#define GPIO_INTR_TRIAC 7
 
 static int *gpio_cb_refs = NULL; // Lazy init
 static task_handle_t cb_task;
@@ -104,14 +105,7 @@ volatile uint64_t triac_start_delay = 5000;
 static void single_triac_isr (void *p)
 {
   gpio_num_t gpio_num = (gpio_num_t)p;
-  const esp_timer_create_args_t oneshot_timer_args = {
-      .callback = &oneshot_timer_callback,
-      /* argument specified here will be passed to timer callback function */
-      //.arg = (void*) periodic_timer,
-      .name = "one-shot"
-};
   gpio_intr_disable (gpio_num);
-  esp_timer_create(&oneshot_timer_args, &oneshot_timer);
   esp_timer_start_once(oneshot_timer, triac_start_delay);
   delayMicroseconds(30);
   gpio_intr_enable (gpio_num);
@@ -125,9 +119,10 @@ static int lgpio_triac_delay (lua_State *L)
   {
     io_rate_local = 2000;
   }
-  //taskENTER_CRITICAL();
+  gpio_intr_disable (15);
   triac_start_delay = io_rate_local;
-  //taskEXIT_CRITICAL();
+  gpio_intr_enable (15);
+  lua_pushinteger (L, io_rate_local);
   return 0;
 }
 
@@ -245,17 +240,24 @@ static int lgpio_trig (lua_State *L)
   }
   else
   {
-    check_err (L, gpio_set_intr_type (gpio, intr_type));
-    if (gpio != 15)
+    if (intr_type != GPIO_INTR_TRIAC) 
     {
+      check_err (L, gpio_set_intr_type (gpio, intr_type));
       check_err (L, gpio_isr_handler_add (gpio, single_pin_isr, (void *)gpio));
     }
     else
-    {
+    {// triac type of trigger 
+      check_err (L, gpio_set_intr_type (gpio, GPIO_INTR_POSEDGE));
+      const esp_timer_create_args_t oneshot_timer_args = {
+      .callback = &oneshot_timer_callback,
+      .name = "one-shot"
+      };
+      esp_timer_create(&oneshot_timer_args, &oneshot_timer);
       check_err (L, gpio_isr_handler_add (gpio, single_triac_isr, (void *)gpio));
     }
-    check_err (L, gpio_intr_enable (gpio));
+
   }
+  check_err (L, gpio_intr_enable (gpio));
   return 0;
 }
 
@@ -347,6 +349,7 @@ LROT_BEGIN(lgpio, NULL, 0)
   LROT_NUMENTRY ( INTR_UP_DOWN, GPIO_INTR_ANYEDGE )
   LROT_NUMENTRY ( INTR_LOW,     GPIO_INTR_LOW_LEVEL )
   LROT_NUMENTRY ( INTR_HIGH,    GPIO_INTR_HIGH_LEVEL )
+  LROT_NUMENTRY ( INTR_TRIAC,   GPIO_INTR_TRIAC )
 
   LROT_NUMENTRY ( DRIVE_0,      GPIO_DRIVE_CAP_0 )
   LROT_NUMENTRY ( DRIVE_1,      GPIO_DRIVE_CAP_1 )
