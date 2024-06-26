@@ -92,15 +92,15 @@ void IRAM_ATTR delayMicroseconds(uint32_t us)
     }
 }
 
+volatile uint64_t triac_start_delay = 5000;
+volatile int  triac_gpio_pin = 2;
 
 static void oneshot_timer_callback(void* arg)
 {
-  gpio_set_level(2,1);
+  gpio_set_level(triac_gpio_pin,1);
   delayMicroseconds(30);// time required to turn triac on
-  gpio_set_level(2,0);
+  gpio_set_level(triac_gpio_pin,0);
 }
-
-volatile uint64_t triac_start_delay = 5000;
 
 static void single_triac_isr (void *p)
 {
@@ -112,15 +112,17 @@ static void single_triac_isr (void *p)
 }
 
 // Lua: gpio.triac_delay(delay_usecs=2000)
-static int lgpio_triac_delay (lua_State *L)
+static int lgpio_set_triac_delay_pin (lua_State *L)
 {
   int io_rate_local = luaL_checkint (L, 1);
+  int pin = luaL_checkint (L, 2);
   if(io_rate_local<2000 || io_rate_local > 9000)
   {
     io_rate_local = 2000;
   }
   gpio_intr_disable (15);
   triac_start_delay = io_rate_local;
+  triac_gpio_pin = pin;
   gpio_intr_enable (15);
   lua_pushinteger (L, io_rate_local);
   return 0;
@@ -330,7 +332,7 @@ LROT_BEGIN(lgpio, NULL, 0)
   LROT_FUNCENTRY( wakeup,       lgpio_wakeup )
   LROT_FUNCENTRY( write,        lgpio_write )
   LROT_FUNCENTRY( set_drive,    lgpio_set_drive )
-  LROT_FUNCENTRY( triac_delay,  lgpio_triac_delay)
+  LROT_FUNCENTRY( set_triac_delay_pin,  lgpio_set_triac_delay_pin)
 
 
   LROT_NUMENTRY ( OUT,          GPIO_MODE_OUTPUT )

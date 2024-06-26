@@ -112,10 +112,13 @@ Establish or clear a callback function to run on interrupt for a GPIO.
 #### Example
 ```lua
 
+GPIOTRIAC = 2 
 GPIOZC = 15
+gpio.config({ gpio = { GPIOTRIAC }, dir = gpio.OUT })
+gpio.config({ gpio = { GPIOZC }, dir = gpio.IN })
 gpio.trig(GPIOZC, gpio.INTR_TRIAC)
-gpio.triac_delay(8500)
-gpio.triac_delay(9000)
+gpio.set_triac_delay_pin(2500,GPIOTRIAC)
+gpio.set_triac_delay_pin(8091,GPIOTRIAC)
 
 ```
 
@@ -156,14 +159,15 @@ Set digital GPIO pin value.
 #### Returns
 `nil`
 
-## triac_delay( delay )
-Set digital GPIO pin value.
+## set_triac_delay_pin()
+Set triac output GPIO pin value and delay.
 
 #### Syntax
-`gpio.write(delay)`
+`gpio.set_triac_delay_pin(delay,pin)`
 
 #### Parameters
-- `delay` delay in micro seconds from zc to turn on the triac, must be betwen 2000 and 9000. 
+- `delay` time to wait from zero crossing before turning on the triac, must be betwen 2000 and 9000 microseconds. 
+- `pin` pin to write, see [GPIO Overview](#gpio-overview)
 
 #### Returns
 `nil`
