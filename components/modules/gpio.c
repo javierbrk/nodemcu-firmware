@@ -255,9 +255,8 @@ static int lgpio_trig (lua_State *L)
       esp_timer_create(&oneshot_timer_args, &oneshot_timer);
       check_err (L, gpio_isr_handler_add (gpio, single_triac_isr, (void *)gpio));
     }
-
+    check_err (L, gpio_intr_enable (gpio));
   }
-  check_err (L, gpio_intr_enable (gpio));
   return 0;
 }
 
