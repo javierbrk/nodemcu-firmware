@@ -90,16 +90,13 @@ typedef struct {
 
 typedef struct {
   QueueHandle_t queue;
-  xTaskHandle taskHandle;
-  int receive_rf;
-  int error_rf;
-  char *line_buffer;
-  size_t line_position;
-  uint16_t need_len;
-  int16_t end_char;
+  TaskHandle_t taskHandle;
 } uart_status_t;
 
-extern uart_status_t uart_status[NUM_UART];
+// We have a bit of legacy spaghetti - these point into modules/uart.c
+extern bool uart_has_on_data_cb(unsigned id);
+extern void uart_feed_data(unsigned id, const char *buf, size_t len);
+extern bool uart_on_error_cb(unsigned id, const char *buf, size_t len);
 
 // Flow control types (this is a bit mask, one can specify PLATFORM_UART_FLOW_RTS | PLATFORM_UART_FLOW_CTS )
 #define PLATFORM_UART_FLOW_NONE               0
@@ -139,7 +136,6 @@ int platform_adc_channel_exists( uint8_t adc, uint8_t channel );
 uint8_t platform_adc_set_width( uint8_t adc, int bits );
 uint8_t platform_adc_setup( uint8_t adc, uint8_t channel, uint8_t attn );
 int platform_adc_read( uint8_t adc, uint8_t channel );
-int platform_adc_read_hall_sensor( );
 enum {
     PLATFORM_ADC_ATTEN_0db   = 0,
     PLATFORM_ADC_ATTEN_2_5db = 1,
@@ -212,7 +208,7 @@ int platform_dht_read( uint8_t gpio_num, uint8_t wakeup_ms, uint8_t *data );
 // WS2812 platform interface
 
 void platform_ws2812_init( void );
-int platform_ws2812_setup( uint8_t gpio_num, uint8_t num_mem, const uint8_t *data, size_t len );
+int platform_ws2812_setup( uint8_t gpio_num, uint32_t reset, uint32_t bit0h, uint32_t bit0l, uint32_t bit1h, uint32_t bit1l, const uint8_t *data, size_t len );
 int platform_ws2812_release( void );
 int platform_ws2812_send( void );
 
@@ -222,9 +218,6 @@ int platform_ws2812_send( void );
 uint32_t platform_flash_get_sector_of_address( uint32_t addr );
 uint32_t platform_flash_write( const void *from, uint32_t toaddr, uint32_t size );
 uint32_t platform_flash_read( void *to, uint32_t fromaddr, uint32_t size );
-uint32_t platform_s_flash_write( const void *from, uint32_t toaddr, uint32_t size );
-uint32_t platform_s_flash_read( void *to, uint32_t fromaddr, uint32_t size );
-uint32_t platform_flash_get_num_sectors(void);
 int platform_flash_erase_sector( uint32_t sector_id );
 
 
