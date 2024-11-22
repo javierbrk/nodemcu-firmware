@@ -104,6 +104,7 @@ idf_component_register(
     "esp_hw_support"
     "fatfs"
     "libsodium"
+    "mdns"
     "lua"
     "mbedtls"
     "mqtt"

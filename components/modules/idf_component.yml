@@ -5,3 +5,4 @@ dependencies:
     version: ">=5.0.0"
   # Component dependencies
   libsodium: "~1.0.20"
+  mdns: ">1.0.0"

@@ -41,6 +41,7 @@
 #include <string.h>
 #include "esp_netif.h"
 #include <math.h>
+#include "mdns.h"
 
 #define PMF_VAL_AVAILABLE 1
 #define PMF_VAL_REQUIRED  2
@@ -607,7 +608,33 @@ static int wifi_sta_getpowersave(lua_State *L)
 }
 
 
+static int start_mdns_service(lua_State *L)
+{
+    const char *mdns_hostname = luaL_checkstring(L, 1);
+    //initialize mDNS service
+    esp_err_t err = mdns_init();
+    if (err) {
+        return luaL_error(L, "MDNS Init failed: %d\n", err);
+    }
+    //set hostname
+    mdns_hostname_set(mdns_hostname);
+    mdns_instance_name_set("LibrePollo");
+
+    mdns_txt_item_t serviceTxtData[] = {
+        {"board", "olivia control v2"},
+        {"path", "/"}
+    };
+
+    err = mdns_service_add("incubapp", "_http", "_tcp", 80, serviceTxtData,
+        sizeof(serviceTxtData) / sizeof(serviceTxtData[0]));
+    if (err) {
+        return luaL_error(L, "MDNS Init failed: %d\n", err);
+    }
+    return 0;
+}
+
 LROT_BEGIN(wifi_sta, NULL, 0)
+  LROT_FUNCENTRY( start_mdns,  start_mdns_service)
   LROT_FUNCENTRY( setip,       wifi_sta_setip )
   LROT_FUNCENTRY( sethostname, wifi_sta_sethostname)
   LROT_FUNCENTRY( settxpower,  wifi_sta_settxpower)
